@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@typechain-types/*": [
+        "typechain-types/*"
+      ],
+      "@deployments/*": [
+        "deployments/*"
+      ],
+      "@deploy/*": [
+        "deploy/*"
+      ],
+      "@utils/*": [
+        "utils/*"
+      ],
+      "@scripts/*": [
+        "scripts/*"
+      ]
+    }
+  },
+  "include": [
+    "./hardhat.config.ts",
+    "./typechain-types",
+    "./scripts",
+    "./test",
+    "./utils",
+    "./deploy",
+    "./deployments",
+    "./tasks"
+  ],
+  "files": [
+    "./hardhat.config.ts"
+  ],
+  "ts-node": {
+    "require": [
+      "tsconfig-paths/register"
+    ]
+  }
+}
