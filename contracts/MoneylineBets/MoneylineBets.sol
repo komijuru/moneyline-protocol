@@ -17,8 +17,9 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
     event MakeBet(address indexed from, Result indexed choice, uint256 indexed ticketCount);
     event CommissionPayment(address indexed from, uint256 indexed commissionAmount);
     event OpenBet(uint256 indexed id, uint256 indexed startsAt, uint256 indexed endsAt, uint256 pricePerTicket);
-    event CloseBet(uint256 indexed id, Result indexed result, uint256 indexed totalPrize);
+    event CloseBet(uint256 indexed id, Result indexed result, uint256 indexed prizePerTicket);
     event FinalizeBet(uint256 indexed id, uint256 indexed fromIdx, uint256 indexed toIdx);
+    event InvalidateBet(uint256 indexed id, Result choice, uint256 indexed fromIdx, uint256 indexed toIdx);
     event InjectBet(uint256 indexed id, uint256 indexed amount);
 
     constructor(address payable _treasury) {
@@ -26,7 +27,6 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         treasury = _treasury;
     }
 
-    // @dev Need a erc20 approval of total price of tickets
     function makeBet(uint256 id, Result choice, uint256 ticketCount) external payable {
         Bet storage bet = bets[id];
         require(choice != Result.NONE, "Cannot pick None");
@@ -35,10 +35,12 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         require(ticketCount * bet.pricePerTicket == msg.value, "Wrong amount of ether paid");
 
         bet.choices[choice].push(msg.sender);
-        bet.counts[choice].push(ticketCount);
-        bet.accumulated[choice] += ticketCount * (bet.pricePerTicket - bet.commissionPerTicket);
+        bet.ticketCounts[choice].push(ticketCount);
+        bet.totalTicketCount[choice] += ticketCount;
 
         if (bet.commissionPerTicket > 0) {
+            (bool sent,) = treasury.call{value : ticketCount * bet.commissionPerTicket}("");
+            require(sent, "Failed ether transfer");
             emit CommissionPayment(msg.sender, ticketCount * bet.commissionPerTicket);
         }
         emit MakeBet(msg.sender, choice, ticketCount);
@@ -67,7 +69,9 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
                 keccak256(abi.encodePacked(request.teamA)) != ""
                 && keccak256(abi.encodePacked(request.teamB)) != ""
                 && keccak256(abi.encodePacked(request.teamA)) != keccak256(abi.encodePacked(request.teamB))
-                && request.startsAt < request.endsAt, "Invalid request"
+                && request.startsAt < request.endsAt
+                && request.pricePerTicket > request.commissionPerTicket,
+                "Invalid request"
             );
 
             bet.code = keccak256(abi.encodePacked(request.code));
@@ -99,28 +103,42 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
             require(bet.result == Result.NONE, "Cannot pick None");
 
             bet.result = result;
-            uint256 totalPrize = bet.injectedAmount;
-            if (result == Result.WIN) {
-                totalPrize += bet.accumulated[Result.DRAW];
-                totalPrize += bet.accumulated[Result.LOSE];
-            } else if (result == Result.LOSE) {
-                totalPrize += bet.accumulated[Result.WIN];
-                totalPrize += bet.accumulated[Result.DRAW];
-            } else {
-                totalPrize += bet.accumulated[Result.WIN];
-                totalPrize += bet.accumulated[Result.LOSE];
-            }
-            if (bet.choices[bet.result].length != 0) {
-                bet.prizePerTicket = totalPrize / bet.choices[bet.result].length;
+            uint256 totalPrize = bet.injectedAmount
+            + bet.totalTicketCount[Result.WIN] * (bet.pricePerTicket - bet.commissionPerTicket)
+            + bet.totalTicketCount[Result.LOSE] * (bet.pricePerTicket - bet.commissionPerTicket)
+            + bet.totalTicketCount[Result.DRAW] * (bet.pricePerTicket - bet.commissionPerTicket);
+
+            if (bet.choices[bet.result].length != 0 && result != Result.CANCEL) {
+                bet.prizePerTicket = totalPrize / bet.totalTicketCount[bet.result];
             }
             bet.status = Status.CLOSED;
 
-            emit CloseBet(id, result, totalPrize);
+            emit CloseBet(id, result, bet.prizePerTicket);
         }
     }
 
     // @dev only operator
-    function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit) external onlyRole(OPERATOR_ROLE) {
+    function invalidateBet(uint256 id, Result choice, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
+        Bet storage bet = bets[id];
+        require(bet.status == Status.CLOSED && bet.result == Result.CANCEL, "Already finalized or not canceled");
+
+        uint256 toIdx = fromIdx + limit;
+        if (toIdx > bet.choices[choice].length) {
+            toIdx = bet.choices[choice].length;
+        }
+        for (uint256 i = fromIdx; i < toIdx; i++) {
+            bet.claimable[bet.choices[choice][i]] += bet.pricePerTicket * bet.ticketCounts[choice][i];
+        }
+
+        if (isLast) {
+            bet.status = Status.FINALIZED;
+        }
+
+        emit InvalidateBet(id, choice, fromIdx, toIdx);
+    }
+
+    // @dev only operator
+    function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
         Bet storage bet = bets[id];
         require(bet.status == Status.CLOSED, "Not closed");
 
@@ -129,13 +147,17 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
             toIdx = bet.choices[bet.result].length;
         }
         for (uint256 i = fromIdx; i < toIdx; i++) {
-            bet.claimable[bet.choices[bet.result][i]] += bet.counts[bet.result][i] * bet.prizePerTicket;
+            bet.claimable[bet.choices[bet.result][i]] += bet.ticketCounts[bet.result][i] * bet.prizePerTicket;
         }
-        bet.status = Status.FINALIZED;
+
+        if (isLast) {
+            bet.status = Status.FINALIZED;
+        }
 
         emit FinalizeBet(id, fromIdx, toIdx);
     }
 
+    // @dev only injector
     function injectBet(uint256 id) external payable onlyRole(INJECTOR_ROLE) {
         Bet storage bet = bets[id];
         require(bet.status == Status.OPEN || bet.status == Status.CLOSED, "Not open or closed");
@@ -145,33 +167,41 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         emit InjectBet(id, msg.value);
     }
 
-    function viewBets(uint256 fromId) external view returns (BetView[100] memory) {
+    function viewBet(uint256 id, address viewer) public view returns (BetView memory) {
+        Bet storage bet = bets[id];
+        return BetView({
+        code : bet.code,
+        id : bet.id,
+        teamA : bet.teamA,
+        teamB : bet.teamB,
+        startsAt : bet.startsAt,
+        endsAt : bet.endsAt,
+        pricePerTicket : bet.pricePerTicket,
+        prizePerTicket : bet.prizePerTicket,
+        commissionPerTicket : bet.commissionPerTicket,
+        injectedAmount : bet.injectedAmount,
+        result : bet.result,
+        status : bet.status,
+        winChoices : bet.choices[Result.WIN],
+        loseChoices : bet.choices[Result.LOSE],
+        drawChoices : bet.choices[Result.DRAW],
+        winTicketCounts : bet.ticketCounts[Result.WIN],
+        loseTicketCounts : bet.ticketCounts[Result.LOSE],
+        drawTicketCounts : bet.ticketCounts[Result.DRAW],
+        winTotalTicketCount : bet.totalTicketCount[Result.WIN],
+        drawTotalTicketCount : bet.totalTicketCount[Result.LOSE],
+        loseTotalTicketCount : bet.totalTicketCount[Result.DRAW],
+        winTotalSize : bet.totalTicketCount[Result.WIN] * (bet.pricePerTicket - bet.commissionPerTicket),
+        loseTotalSize : bet.totalTicketCount[Result.LOSE] * (bet.pricePerTicket - bet.commissionPerTicket),
+        drawTotalSize : bet.totalTicketCount[Result.DRAW] * (bet.pricePerTicket - bet.commissionPerTicket),
+        claimable : bet.claimable[viewer]
+        });
+    }
+
+    function viewBets(uint256 fromId, address viewer) external view returns (BetView[100] memory) {
         BetView[100] memory betViews;
         for (uint256 i = 0; i < 100; i++) {
-            Bet storage bet = bets[fromId + i];
-            betViews[i] = BetView(
-                bet.code,
-                bet.id,
-                bet.teamA,
-                bet.teamB,
-                bet.startsAt,
-                bet.endsAt,
-                bet.pricePerTicket,
-                bet.prizePerTicket,
-                bet.commissionPerTicket,
-                bet.injectedAmount,
-                bet.result,
-                bet.status,
-                bet.choices[Result.WIN],
-                bet.counts[Result.WIN],
-                bet.choices[Result.LOSE],
-                bet.counts[Result.LOSE],
-                bet.choices[Result.DRAW],
-                bet.counts[Result.DRAW],
-                bet.accumulated[Result.WIN],
-                bet.accumulated[Result.LOSE],
-                bet.accumulated[Result.DRAW]
-            );
+            betViews[i] = viewBet(fromId + i, viewer);
         }
         return betViews;
     }

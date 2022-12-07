@@ -3,7 +3,7 @@
   "chainId": "5",
   "contracts": {
     "MoneylineBets": {
-      "address": "0x833bE1AA840eD2D0d31d278bb35C29d103EC1BdF",
+      "address": "0xf87B502De54d49838fecAf9eD0dDf2F3EbddCC58",
       "abi": [
         {
           "inputs": [
@@ -121,6 +121,31 @@
             }
           ],
           "name": "InjectBet",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "fromIdx",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "toIdx",
+              "type": "uint256"
+            }
+          ],
+          "name": "InvalidateBet",
           "type": "event"
         },
         {
@@ -414,6 +439,11 @@
               "internalType": "uint256",
               "name": "limit",
               "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "isLast",
+              "type": "bool"
             }
           ],
           "name": "finalizeBet",
@@ -493,6 +523,39 @@
           "name": "injectBet",
           "outputs": [],
           "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum IMoneylineBets.Result",
+              "name": "choice",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fromIdx",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "limit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "isLast",
+              "type": "bool"
+            }
+          ],
+          "name": "invalidateBet",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -655,6 +718,11 @@
               "internalType": "uint256",
               "name": "fromId",
               "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "viewer",
+              "type": "address"
             }
           ],
           "name": "viewBets",
@@ -764,6 +832,11 @@
                 {
                   "internalType": "uint256",
                   "name": "drawAccumulated",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "claimable",
                   "type": "uint256"
                 }
               ],

@@ -3,11 +3,11 @@ pragma solidity ^0.8.17;
 
 interface IMoneylineBets {
     enum Result {
-        NONE, WIN, DRAW, LOSE
+        NONE, WIN, DRAW, LOSE, CANCEL
     }
 
     enum Status {
-        NONE, OPEN, CLOSED, FINALIZED
+        NONE, OPEN, CLOSED, FINALIZED, INVALIDATED
     }
 
     struct Bet {
@@ -24,8 +24,8 @@ interface IMoneylineBets {
         Result result;
         Status status;
         mapping(Result => address[]) choices;
-        mapping(Result => uint256[]) counts;
-        mapping(Result => uint256) accumulated;
+        mapping(Result => uint256[]) ticketCounts;
+        mapping(Result => uint256) totalTicketCount;
         mapping(address => uint256) claimable;
     }
 
@@ -43,14 +43,18 @@ interface IMoneylineBets {
         Result result;
         Status status;
         address[] winChoices;
-        uint256[] winCounts;
+        uint256[] winTicketCounts;
         address[] loseChoices;
-        uint256[] loseCounts;
+        uint256[] loseTicketCounts;
         address[] drawChoices;
-        uint256[] drawCounts;
-        uint256 winAccumulated;
-        uint256 loseAccumulated;
-        uint256 drawAccumulated;
+        uint256[] drawTicketCounts;
+        uint256 winTotalTicketCount;
+        uint256 drawTotalTicketCount;
+        uint256 loseTotalTicketCount;
+        uint256 winTotalSize;
+        uint256 loseTotalSize;
+        uint256 drawTotalSize;
+        uint256 claimable;
     }
 
     struct OpenBetRequest {
@@ -76,9 +80,11 @@ interface IMoneylineBets {
         Result[] calldata results
     ) external;
 
-    function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit) external;
+    function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit, bool isLast) external;
+
+    function invalidateBet(uint256 id, Result choice, uint256 fromIdx, uint256 limit, bool isLast) external;
 
     function injectBet(uint256 id) external payable;
 
-    function viewBets(uint256 fromId) external view returns (BetView[100] memory);
+    function viewBets(uint256 fromId, address viewer) external view returns (BetView[100] memory);
 }
