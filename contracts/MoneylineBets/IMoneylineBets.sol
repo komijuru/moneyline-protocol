@@ -21,6 +21,7 @@ interface IMoneylineBets {
         uint256 prizePerTicket;
         uint256 commissionPerTicket;
         uint256 injectedAmount;
+        uint256 treasuryAmount;
         Result result;
         Status status;
         mapping(Result => address[]) choices;
@@ -40,6 +41,7 @@ interface IMoneylineBets {
         uint256 prizePerTicket;
         uint256 commissionPerTicket;
         uint256 injectedAmount;
+        uint256 treasuryAmount;
         Result result;
         Status status;
         address[] winChoices;
@@ -73,7 +75,7 @@ interface IMoneylineBets {
 
     function openBets(
         OpenBetRequest[] calldata requests
-    ) external;
+    ) external returns (uint256);
 
     function closeBets(
         uint256[] calldata ids,
@@ -84,7 +86,11 @@ interface IMoneylineBets {
 
     function invalidateBet(uint256 id, Result choice, uint256 fromIdx, uint256 limit, bool isLast) external;
 
+    function settleTreasury(uint256 id) external;
+
     function injectBet(uint256 id) external payable;
+
+    function viewBet(uint256 id, address viewer) external view returns (BetView memory);
 
     function viewBets(uint256 fromId, address viewer) external view returns (BetView[100] memory);
 }

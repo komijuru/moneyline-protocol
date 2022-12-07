@@ -2,8 +2,12 @@ import {MONEYLINE_BETS_CONTRACT} from './index';
 
 async function main() {
     const {contract, owner} = await MONEYLINE_BETS_CONTRACT();
-    const bets = await contract.viewBets(1, await owner.getAddress());
-    console.log(bets.slice(0, 50));
+
+    const betId = await contract.latestBetId();
+    const bet = await contract.viewBet(betId, await owner.getAddress());
+    const betRaw = await contract.bets(betId);
+    console.log("View:", bet)
+    console.log("View raw:", betRaw)
 }
 
 main()

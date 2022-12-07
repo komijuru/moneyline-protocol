@@ -153,7 +153,7 @@ describe("MoneylineBets", () => {
                 const {moneylineBets, alice, treasury, betId} = await singleBetFixture(parseEther("0.1"));
 
                 await expect(moneylineBets.connect(alice).makeBet(betId, Result.WIN, 10, {value: parseEther("10")}))
-                    .to.changeEtherBalances([moneylineBets, alice, treasury], [parseEther("9"), parseEther("-10"), parseEther("1")])
+                    .to.changeEtherBalances([moneylineBets, alice], [parseEther("10"), parseEther("-10")])
             });
 
             it('should decrease total size', async () => {
@@ -166,12 +166,14 @@ describe("MoneylineBets", () => {
                 expect(bet.winTotalSize).to.equal(parseEther("13.5"));
             });
 
-            it('should emit CommissionPayment event', async () => {
+            it('should increase treasury amount', async () => {
                 const {moneylineBets, alice, pricePerTicket, betId} = await singleBetFixture(parseEther("0.1"));
 
-                await expect(moneylineBets.connect(alice).makeBet(betId, Result.WIN, 10, {value: pricePerTicket.mul(10)}))
-                    .to.emit(moneylineBets, "CommissionPayment")
-                    .withArgs(await alice.getAddress(), parseEther("0.1").mul(10))
+                const bet = await moneylineBets.bets(betId);
+                expect(bet.treasuryAmount).to.equal(0);
+                await moneylineBets.connect(alice).makeBet(betId, Result.WIN, 10, {value: pricePerTicket.mul(10)});
+                const updatedBet = await moneylineBets.bets(betId);
+                expect(updatedBet.treasuryAmount).to.equal(parseEther("0.1").mul(10));
             });
         })
 

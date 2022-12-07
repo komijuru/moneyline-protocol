@@ -3,7 +3,7 @@
   "chainId": "5",
   "contracts": {
     "MoneylineBets": {
-      "address": "0x974D2aC07C0eaf27b2178bCec4Ff8AC0385aA9D0",
+      "address": "0xF6986F368fD2295cD982fD10A0ea3638468c9E1d",
       "abi": [
         {
           "inputs": [
@@ -65,9 +65,9 @@
           "inputs": [
             {
               "indexed": true,
-              "internalType": "address",
-              "name": "from",
-              "type": "address"
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
             },
             {
               "indexed": true,
@@ -385,6 +385,11 @@
               "type": "uint256"
             },
             {
+              "internalType": "uint256",
+              "name": "treasuryAmount",
+              "type": "uint256"
+            },
+            {
               "internalType": "enum IMoneylineBets.Result",
               "name": "result",
               "type": "uint8"
@@ -646,7 +651,13 @@
             }
           ],
           "name": "openBets",
-          "outputs": [],
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
           "stateMutability": "nonpayable",
           "type": "function"
         },
@@ -682,6 +693,19 @@
             }
           ],
           "name": "revokeRole",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            }
+          ],
+          "name": "settleTreasury",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -783,6 +807,11 @@
                 {
                   "internalType": "uint256",
                   "name": "injectedAmount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "treasuryAmount",
                   "type": "uint256"
                 },
                 {
@@ -934,6 +963,11 @@
                 {
                   "internalType": "uint256",
                   "name": "injectedAmount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "treasuryAmount",
                   "type": "uint256"
                 },
                 {

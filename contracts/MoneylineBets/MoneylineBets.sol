@@ -15,7 +15,7 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
 
     event ClaimBet(address indexed from, uint256 indexed amount);
     event MakeBet(address indexed from, Result indexed choice, uint256 indexed ticketCount);
-    event CommissionPayment(address indexed from, uint256 indexed commissionAmount);
+    event CommissionPayment(uint256 indexed id, uint256 indexed commissionAmount);
     event OpenBet(uint256 indexed id, uint256 indexed startsAt, uint256 indexed endsAt, uint256 pricePerTicket);
     event CloseBet(uint256 indexed id, Result indexed result, uint256 indexed prizePerTicket);
     event FinalizeBet(uint256 indexed id, uint256 indexed fromIdx, uint256 indexed toIdx);
@@ -37,12 +37,10 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         bet.choices[choice].push(msg.sender);
         bet.ticketCounts[choice].push(ticketCount);
         bet.totalTicketCount[choice] += ticketCount;
-
         if (bet.commissionPerTicket > 0) {
-            (bool sent,) = treasury.call{value : ticketCount * bet.commissionPerTicket}("");
-            require(sent, "Failed ether transfer");
-            emit CommissionPayment(msg.sender, ticketCount * bet.commissionPerTicket);
+            bet.treasuryAmount += ticketCount * bet.commissionPerTicket;
         }
+
         emit MakeBet(msg.sender, choice, ticketCount);
     }
 
@@ -50,17 +48,18 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         Bet storage bet = bets[id];
         require(bet.status == Status.FINALIZED, "Not finalized");
         require(bet.claimable[msg.sender] > 0, "Nothing to claim");
+
         uint256 amount = bet.claimable[msg.sender];
-        (bool sent,) = payable(msg.sender).call{value : amount}("");
-        require(sent, "Failed ether transfer");
+        _transfer(msg.sender, amount);
         bet.claimable[msg.sender] = 0;
+
         emit ClaimBet(msg.sender, amount);
     }
 
     // @dev only operator
     function openBets(
         OpenBetRequest[] calldata requests
-    ) external onlyRole(OPERATOR_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) returns (uint256) {
         for (uint256 i = 0; i < requests.length; i++) {
             OpenBetRequest memory request = requests[i];
             uint256 id = ++latestBetId;
@@ -85,8 +84,10 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
             bet.prizePerTicket = 0;
             bet.result = Result.NONE;
             bet.status = Status.OPEN;
+
             emit OpenBet(id, request.startsAt, request.endsAt, request.pricePerTicket);
         }
+        return latestBetId;
     }
 
     // @dev only operator
@@ -101,13 +102,10 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
             Bet storage bet = bets[id];
             require(bet.status == Status.OPEN, "Not open");
             require(bet.result == Result.NONE, "Cannot pick None");
+            require(block.timestamp > bet.endsAt, "Invalid period");
 
             bet.result = result;
-            uint256 totalPrize = bet.injectedAmount
-            + bet.totalTicketCount[Result.WIN] * (bet.pricePerTicket - bet.commissionPerTicket)
-            + bet.totalTicketCount[Result.LOSE] * (bet.pricePerTicket - bet.commissionPerTicket)
-            + bet.totalTicketCount[Result.DRAW] * (bet.pricePerTicket - bet.commissionPerTicket);
-
+            uint256 totalPrize = _totalPrize(id);
             if (bet.choices[bet.result].length != 0 && result != Result.CANCEL) {
                 bet.prizePerTicket = totalPrize / bet.totalTicketCount[bet.result];
             }
@@ -129,8 +127,8 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         for (uint256 i = fromIdx; i < toIdx; i++) {
             bet.claimable[bet.choices[choice][i]] += bet.pricePerTicket * bet.ticketCounts[choice][i];
         }
-
         if (isLast) {
+            bet.treasuryAmount = bet.injectedAmount;
             bet.status = Status.FINALIZED;
         }
 
@@ -140,7 +138,15 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
     // @dev only operator
     function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
         Bet storage bet = bets[id];
-        require(bet.status == Status.CLOSED, "Not closed");
+        require(bet.status == Status.CLOSED && bet.result != Result.CANCEL, "Not closed or bet is canceled");
+
+        // Finalize if winner does not exists
+        if (bet.choices[bet.result].length == 0) {
+            bet.treasuryAmount += _totalPrize(id);
+            bet.status = Status.FINALIZED;
+            emit FinalizeBet(id, 0, 0);
+            return;
+        }
 
         uint256 toIdx = fromIdx + limit;
         if (toIdx > bet.choices[bet.result].length) {
@@ -149,12 +155,24 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         for (uint256 i = fromIdx; i < toIdx; i++) {
             bet.claimable[bet.choices[bet.result][i]] += bet.ticketCounts[bet.result][i] * bet.prizePerTicket;
         }
-
         if (isLast) {
             bet.status = Status.FINALIZED;
         }
 
         emit FinalizeBet(id, fromIdx, toIdx);
+    }
+
+    // @dev only operator
+    function settleTreasury(uint256 id) external onlyRole(OPERATOR_ROLE) {
+        Bet storage bet = bets[id];
+        require(bet.status == Status.FINALIZED, "Not open or closed");
+        require(bet.treasuryAmount > 0, "Already settled");
+
+        uint256 amount = bet.treasuryAmount;
+        _transfer(treasury, amount);
+        bet.treasuryAmount = 0;
+
+        emit CommissionPayment(id, amount);
     }
 
     // @dev only injector
@@ -180,6 +198,7 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         prizePerTicket : bet.prizePerTicket,
         commissionPerTicket : bet.commissionPerTicket,
         injectedAmount : bet.injectedAmount,
+        treasuryAmount : bet.treasuryAmount,
         result : bet.result,
         status : bet.status,
         winChoices : bet.choices[Result.WIN],
@@ -204,5 +223,18 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
             betViews[i] = viewBet(fromId + i, viewer);
         }
         return betViews;
+    }
+
+    function _totalPrize(uint256 id) private view returns (uint256) {
+        Bet storage bet = bets[id];
+        return bet.injectedAmount
+        + bet.totalTicketCount[Result.WIN] * (bet.pricePerTicket - bet.commissionPerTicket)
+        + bet.totalTicketCount[Result.LOSE] * (bet.pricePerTicket - bet.commissionPerTicket)
+        + bet.totalTicketCount[Result.DRAW] * (bet.pricePerTicket - bet.commissionPerTicket);
+    }
+
+    function _transfer(address to, uint256 amount) private {
+        (bool sent,) = to.call{value : amount}("");
+        require(sent, "Failed transferring ether");
     }
 }

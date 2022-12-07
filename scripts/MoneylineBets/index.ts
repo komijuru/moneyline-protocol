@@ -26,14 +26,15 @@ export const USING_MONEYLINE_BETS_VARIABLES = variables<UsingMoneylineBetsVariab
 );
 
 export const MONEYLINE_BETS_CONTRACT = async () => {
-    const {alice} = await getNamedAccounts();
+    const {alice, bob} = await getNamedAccounts();
     const owner = await ethers.getSigner(alice);
+    const signedBob = await ethers.getSigner(bob);
     const factory: MoneylineBets__factory = await ethers.getContractFactory(
         MONEYLINE_BETS
     );
     const contract: MoneylineBets = factory.attach(USING_MONEYLINE_BETS_VARIABLES.ADDRESS);
     console.log('Contract deployed to: ', USING_MONEYLINE_BETS_VARIABLES.ADDRESS);
     console.log('Contract deployed by (Owner): ', owner.address, '\n');
-    return {contract, owner};
+    return {contract, owner, bob: signedBob};
 
 };
