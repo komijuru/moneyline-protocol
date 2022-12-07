@@ -3,7 +3,7 @@
   "chainId": "5",
   "contracts": {
     "MoneylineBets": {
-      "address": "0xf87B502De54d49838fecAf9eD0dDf2F3EbddCC58",
+      "address": "0x974D2aC07C0eaf27b2178bCec4Ff8AC0385aA9D0",
       "abi": [
         {
           "inputs": [
@@ -53,7 +53,7 @@
             {
               "indexed": true,
               "internalType": "uint256",
-              "name": "totalPrize",
+              "name": "prizePerTicket",
               "type": "uint256"
             }
           ],
@@ -131,6 +131,12 @@
               "internalType": "uint256",
               "name": "id",
               "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "enum IMoneylineBets.Result",
+              "name": "choice",
+              "type": "uint8"
             },
             {
               "indexed": true,
@@ -716,6 +722,157 @@
           "inputs": [
             {
               "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "viewer",
+              "type": "address"
+            }
+          ],
+          "name": "viewBet",
+          "outputs": [
+            {
+              "components": [
+                {
+                  "internalType": "bytes32",
+                  "name": "code",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "string",
+                  "name": "teamA",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "teamB",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "startsAt",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "endsAt",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "pricePerTicket",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "prizePerTicket",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "commissionPerTicket",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "injectedAmount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "enum IMoneylineBets.Result",
+                  "name": "result",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "enum IMoneylineBets.Status",
+                  "name": "status",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "winChoices",
+                  "type": "address[]"
+                },
+                {
+                  "internalType": "uint256[]",
+                  "name": "winTicketCounts",
+                  "type": "uint256[]"
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "loseChoices",
+                  "type": "address[]"
+                },
+                {
+                  "internalType": "uint256[]",
+                  "name": "loseTicketCounts",
+                  "type": "uint256[]"
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "drawChoices",
+                  "type": "address[]"
+                },
+                {
+                  "internalType": "uint256[]",
+                  "name": "drawTicketCounts",
+                  "type": "uint256[]"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "winTotalTicketCount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "drawTotalTicketCount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "loseTotalTicketCount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "winTotalSize",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "loseTotalSize",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "drawTotalSize",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "claimable",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct IMoneylineBets.BetView",
+              "name": "",
+              "type": "tuple"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
               "name": "fromId",
               "type": "uint256"
             },
@@ -796,7 +953,7 @@
                 },
                 {
                   "internalType": "uint256[]",
-                  "name": "winCounts",
+                  "name": "winTicketCounts",
                   "type": "uint256[]"
                 },
                 {
@@ -806,7 +963,7 @@
                 },
                 {
                   "internalType": "uint256[]",
-                  "name": "loseCounts",
+                  "name": "loseTicketCounts",
                   "type": "uint256[]"
                 },
                 {
@@ -816,22 +973,37 @@
                 },
                 {
                   "internalType": "uint256[]",
-                  "name": "drawCounts",
+                  "name": "drawTicketCounts",
                   "type": "uint256[]"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "winAccumulated",
+                  "name": "winTotalTicketCount",
                   "type": "uint256"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "loseAccumulated",
+                  "name": "drawTotalTicketCount",
                   "type": "uint256"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "drawAccumulated",
+                  "name": "loseTotalTicketCount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "winTotalSize",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "loseTotalSize",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "drawTotalSize",
                   "type": "uint256"
                 },
                 {

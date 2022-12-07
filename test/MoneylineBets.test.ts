@@ -110,8 +110,7 @@ describe("MoneylineBets", () => {
                 .withArgs(1, now, now + day, parseEther("1"))
         });
 
-        it('should be reverted with invalid arguments', async () => {
-            // TODO
+        it('TODO: should be reverted with invalid arguments', async () => {
         });
     })
 
@@ -176,8 +175,7 @@ describe("MoneylineBets", () => {
             });
         })
 
-        it('should be reverted with invalid arguments', async () => {
-            // TODO
+        it('TODO: should be reverted with invalid arguments', async () => {
         });
     })
 
@@ -228,7 +226,7 @@ describe("MoneylineBets", () => {
             });
         })
 
-        it('should be reverted if bet is not open', async () => {
+        it('TODO: should be reverted if bet is not open', async () => {
 
         });
     })
@@ -255,7 +253,7 @@ describe("MoneylineBets", () => {
             expect(status).to.equal(Status.FINALIZED)
         });
 
-        it('should be reverted if bet is not closed', async () => {
+        it('TODO: should be reverted if bet is not closed', async () => {
 
         });
     })
