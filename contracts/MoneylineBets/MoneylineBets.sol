@@ -2,9 +2,11 @@
 pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./IMoneylineBets.sol";
 
-contract MoneylineBets is IMoneylineBets, AccessControl {
+contract MoneylineBets is IMoneylineBets, AccessControl, ReentrancyGuard, Pausable {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant INJECTOR_ROLE = keccak256("INJECTOR_ROLE");
 
@@ -27,10 +29,10 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         treasury = _treasury;
     }
 
-    function makeBet(uint256 id, Result choice, uint256 ticketCount) external payable {
+    function makeBet(uint256 id, Result choice, uint256 ticketCount) external payable whenNotPaused {
         Bet storage bet = bets[id];
         require(choice != Result.NONE, "Cannot pick None");
-        require(bet.status == Status.OPEN, "Not open");
+        require(bet.status == Status.OPEN, "Bet not open");
         require(bet.startsAt <= block.timestamp && block.timestamp <= bet.endsAt, "Betting period is over");
         require(ticketCount * bet.pricePerTicket == msg.value, "Wrong amount of ether paid");
 
@@ -44,7 +46,7 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         emit MakeBet(msg.sender, choice, ticketCount);
     }
 
-    function claimBet(uint256 id) external {
+    function claimBet(uint256 id) external nonReentrant whenNotPaused {
         Bet storage bet = bets[id];
         require(bet.status == Status.FINALIZED, "Not finalized");
         require(bet.claimable[msg.sender] > 0, "Nothing to claim");
@@ -54,135 +56,6 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         bet.claimable[msg.sender] = 0;
 
         emit ClaimBet(msg.sender, amount);
-    }
-
-    // @dev only operator
-    function openBets(
-        OpenBetRequest[] calldata requests
-    ) external onlyRole(OPERATOR_ROLE) returns (uint256) {
-        for (uint256 i = 0; i < requests.length; i++) {
-            OpenBetRequest memory request = requests[i];
-            uint256 id = ++latestBetId;
-            Bet storage bet = bets[id];
-            require(
-                keccak256(abi.encodePacked(request.teamA)) != ""
-                && keccak256(abi.encodePacked(request.teamB)) != ""
-                && keccak256(abi.encodePacked(request.teamA)) != keccak256(abi.encodePacked(request.teamB))
-                && request.startsAt < request.endsAt
-                && request.pricePerTicket > request.commissionPerTicket,
-                "Invalid request"
-            );
-
-            bet.code = keccak256(abi.encodePacked(request.code));
-            bet.id = id;
-            bet.teamA = request.teamA;
-            bet.teamB = request.teamB;
-            bet.startsAt = request.startsAt;
-            bet.endsAt = request.endsAt;
-            bet.pricePerTicket = request.pricePerTicket;
-            bet.commissionPerTicket = request.commissionPerTicket;
-            bet.prizePerTicket = 0;
-            bet.result = Result.NONE;
-            bet.status = Status.OPEN;
-
-            emit OpenBet(id, request.startsAt, request.endsAt, request.pricePerTicket);
-        }
-        return latestBetId;
-    }
-
-    // @dev only operator
-    function closeBets(
-        uint256[] calldata ids,
-        Result[] calldata results
-    ) external onlyRole(OPERATOR_ROLE) {
-        require(ids.length == results.length, "Invalid input length");
-        for (uint256 i = 0; i < ids.length; i++) {
-            uint256 id = ids[i];
-            Result result = results[i];
-            Bet storage bet = bets[id];
-            require(bet.status == Status.OPEN, "Not open");
-            require(bet.result == Result.NONE, "Cannot pick None");
-            require(block.timestamp > bet.endsAt, "Invalid period");
-
-            bet.result = result;
-            uint256 totalPrize = _totalPrize(id);
-            if (bet.choices[bet.result].length != 0 && result != Result.CANCEL) {
-                bet.prizePerTicket = totalPrize / bet.totalTicketCount[bet.result];
-            }
-            bet.status = Status.CLOSED;
-
-            emit CloseBet(id, result, bet.prizePerTicket);
-        }
-    }
-
-    // @dev only operator
-    function invalidateBet(uint256 id, Result choice, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
-        Bet storage bet = bets[id];
-        require(bet.status == Status.CLOSED && bet.result == Result.CANCEL, "Already finalized or not canceled");
-
-        uint256 toIdx = fromIdx + limit;
-        if (toIdx > bet.choices[choice].length) {
-            toIdx = bet.choices[choice].length;
-        }
-        for (uint256 i = fromIdx; i < toIdx; i++) {
-            bet.claimable[bet.choices[choice][i]] += bet.pricePerTicket * bet.ticketCounts[choice][i];
-        }
-        if (isLast) {
-            bet.treasuryAmount = bet.injectedAmount;
-            bet.status = Status.FINALIZED;
-        }
-
-        emit InvalidateBet(id, choice, fromIdx, toIdx);
-    }
-
-    // @dev only operator
-    function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
-        Bet storage bet = bets[id];
-        require(bet.status == Status.CLOSED && bet.result != Result.CANCEL, "Not closed or bet is canceled");
-
-        // Finalize if winner does not exists
-        if (bet.choices[bet.result].length == 0) {
-            bet.treasuryAmount += _totalPrize(id);
-            bet.status = Status.FINALIZED;
-            emit FinalizeBet(id, 0, 0);
-            return;
-        }
-
-        uint256 toIdx = fromIdx + limit;
-        if (toIdx > bet.choices[bet.result].length) {
-            toIdx = bet.choices[bet.result].length;
-        }
-        for (uint256 i = fromIdx; i < toIdx; i++) {
-            bet.claimable[bet.choices[bet.result][i]] += bet.ticketCounts[bet.result][i] * bet.prizePerTicket;
-        }
-        if (isLast) {
-            bet.status = Status.FINALIZED;
-        }
-
-        emit FinalizeBet(id, fromIdx, toIdx);
-    }
-
-    // @dev only operator
-    function settleTreasury(uint256 id) external onlyRole(OPERATOR_ROLE) {
-        Bet storage bet = bets[id];
-        require(bet.status == Status.FINALIZED, "Not open or closed");
-        require(bet.treasuryAmount > 0, "Already settled");
-
-        uint256 amount = bet.treasuryAmount;
-        _transfer(treasury, amount);
-        bet.treasuryAmount = 0;
-
-        emit CommissionPayment(id, amount);
-    }
-
-    // @dev only injector
-    function injectBet(uint256 id) external payable onlyRole(INJECTOR_ROLE) {
-        Bet storage bet = bets[id];
-        require(bet.status == Status.OPEN || bet.status == Status.CLOSED, "Not open or closed");
-
-        bet.injectedAmount = msg.value;
-
-        emit InjectBet(id, msg.value);
     }
 
     function viewBet(uint256 id, address viewer) public view returns (BetView memory) {
@@ -225,8 +98,153 @@ contract MoneylineBets is IMoneylineBets, AccessControl {
         return betViews;
     }
 
+    /**
+     * Operator Functions
+     */
+    function openBets(
+        OpenBetRequest[] calldata requests
+    ) external onlyRole(OPERATOR_ROLE) returns (uint256) {
+        for (uint256 i = 0; i < requests.length; i++) {
+            OpenBetRequest memory request = requests[i];
+            uint256 id = ++latestBetId;
+            Bet storage bet = bets[id];
+            require(
+                keccak256(abi.encodePacked(request.teamA)) != keccak256(abi.encodePacked(""))
+                && keccak256(abi.encodePacked(request.teamB)) != keccak256(abi.encodePacked(""))
+                && keccak256(abi.encodePacked(request.teamA)) != keccak256(abi.encodePacked(request.teamB))
+                && request.startsAt < request.endsAt
+                && request.pricePerTicket > request.commissionPerTicket,
+                "Invalid request"
+            );
+
+            bet.code = keccak256(abi.encodePacked(request.code));
+            bet.id = id;
+            bet.teamA = request.teamA;
+            bet.teamB = request.teamB;
+            bet.startsAt = request.startsAt;
+            bet.endsAt = request.endsAt;
+            bet.pricePerTicket = request.pricePerTicket;
+            bet.commissionPerTicket = request.commissionPerTicket;
+            bet.prizePerTicket = 0;
+            bet.result = Result.NONE;
+            bet.status = Status.OPEN;
+
+            emit OpenBet(id, request.startsAt, request.endsAt, request.pricePerTicket);
+        }
+        return latestBetId;
+    }
+
+    function closeBets(
+        uint256[] calldata ids,
+        Result[] calldata results
+    ) external onlyRole(OPERATOR_ROLE) {
+        require(ids.length == results.length, "Invalid input length");
+        for (uint256 i = 0; i < ids.length; i++) {
+            uint256 id = ids[i];
+            Result result = results[i];
+            Bet storage bet = bets[id];
+            require(bet.status == Status.OPEN, "Not open");
+            require(result != Result.NONE, "Cannot pick None");
+            require(block.timestamp > bet.endsAt, "Invalid period");
+
+            bet.result = result;
+            uint256 totalPrize = _totalPrize(id);
+            if (bet.choices[bet.result].length != 0 && result != Result.CANCEL) {
+                bet.prizePerTicket = totalPrize / bet.totalTicketCount[bet.result];
+            }
+            bet.status = Status.CLOSED;
+
+            emit CloseBet(id, result, bet.prizePerTicket);
+        }
+    }
+
+    function invalidateBet(uint256 id, Result choice, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
+        Bet storage bet = bets[id];
+        require(bet.status == Status.CLOSED && bet.result == Result.CANCEL, "Already finalized or not canceled");
+
+        uint256 toIdx = fromIdx + limit;
+        if (toIdx > bet.choices[choice].length) {
+            toIdx = bet.choices[choice].length;
+        }
+        for (uint256 i = fromIdx; i < toIdx; i++) {
+            bet.claimable[bet.choices[choice][i]] += bet.pricePerTicket * bet.ticketCounts[choice][i];
+        }
+        if (isLast) {
+            bet.treasuryAmount = bet.injectedAmount;
+            bet.status = Status.FINALIZED;
+        }
+
+        emit InvalidateBet(id, choice, fromIdx, toIdx);
+    }
+
+    function finalizeBet(uint256 id, uint256 fromIdx, uint256 limit, bool isLast) external onlyRole(OPERATOR_ROLE) {
+        Bet storage bet = bets[id];
+        require(bet.status == Status.CLOSED, "Not closed");
+        require(bet.result != Result.CANCEL, "Bet canceled");
+
+        // Finalize if winner does not exists
+        if (bet.choices[bet.result].length == 0) {
+            bet.treasuryAmount += _totalPrize(id);
+            bet.status = Status.FINALIZED;
+            emit FinalizeBet(id, 0, 0);
+            return;
+        }
+
+        uint256 toIdx = fromIdx + limit;
+        if (toIdx > bet.choices[bet.result].length) {
+            toIdx = bet.choices[bet.result].length;
+        }
+        for (uint256 i = fromIdx; i < toIdx; i++) {
+            bet.claimable[bet.choices[bet.result][i]] += bet.ticketCounts[bet.result][i] * bet.prizePerTicket;
+        }
+        if (isLast) {
+            bet.status = Status.FINALIZED;
+        }
+
+        emit FinalizeBet(id, fromIdx, toIdx);
+    }
+
+    function settleTreasury(uint256 id) external onlyRole(OPERATOR_ROLE) {
+        Bet storage bet = bets[id];
+        require(bet.status == Status.FINALIZED, "Not open or closed");
+        require(bet.treasuryAmount > 0, "Already settled");
+
+        uint256 amount = bet.treasuryAmount;
+        _transfer(treasury, amount);
+        bet.treasuryAmount = 0;
+
+        emit CommissionPayment(id, amount);
+    }
+
+    /**
+     * Injector Functions
+     */
+    function injectBet(uint256 id) external payable onlyRole(INJECTOR_ROLE) {
+        Bet storage bet = bets[id];
+        require(bet.status == Status.OPEN || bet.status == Status.CLOSED, "Not open or closed");
+
+        bet.injectedAmount = msg.value;
+
+        emit InjectBet(id, msg.value);
+    }
+
+    /**
+     * Admin Functions
+     */
+    function togglePause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (paused()) {
+            _unpause();
+        } else {
+            _pause();
+        }
+    }
+
+    /**
+     * Helpers
+     */
     function _totalPrize(uint256 id) private view returns (uint256) {
         Bet storage bet = bets[id];
+
         return bet.injectedAmount
         + bet.totalTicketCount[Result.WIN] * (bet.pricePerTicket - bet.commissionPerTicket)
         + bet.totalTicketCount[Result.LOSE] * (bet.pricePerTicket - bet.commissionPerTicket)

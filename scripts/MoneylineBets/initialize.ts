@@ -1,7 +1,7 @@
 import {NonceManager} from '@ethersproject/experimental';
 
 import {MONEYLINE_BETS_CONTRACT, Result} from './index';
-import worldCup2022 from './worldCup2022.json';
+import worldCup2022 from './worldCup2022_test.json';
 
 async function main() {
     const {contract, owner} = await MONEYLINE_BETS_CONTRACT();
@@ -48,11 +48,11 @@ async function main() {
     const tx2 = await contract.connect(executor)
         .closeBets(closedBets.map(it => it.id), closedBets.map(it => {
             if (it.teamAScore === it.teamBScore) {
-                return Result.DRAW.valueOf();
+                return Result.DRAW;
             } else if (it.teamAScore! > it.teamBScore!) {
-                return Result.WIN.valueOf();
+                return Result.WIN;
             }
-            return Result.LOSE.valueOf();
+            return Result.LOSE;
         }));
 
     console.log("Close bets:", tx2)

@@ -1,0 +1,192 @@
+[
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1669906800,
+    "teamA": "Canada",
+    "teamB": "Morocco",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 1,
+    "teamBScore": 2
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1669921200,
+    "teamA": "Japan",
+    "teamB": "Spain",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 2,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1669921200,
+    "teamA": "Costa Rica",
+    "teamB": "Germany",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 2,
+    "teamBScore": 4
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1669993200,
+    "teamA": "Ghana",
+    "teamB": "Uruguay",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 0,
+    "teamBScore": 2
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1669993200,
+    "teamA": "Korea Republic",
+    "teamB": "Portugal",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 2,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670007600,
+    "teamA": "Serbia",
+    "teamB": "Switzerland",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 2,
+    "teamBScore": 3
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670007600,
+    "teamA": "Cameroon",
+    "teamB": "Brazil",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 1,
+    "teamBScore": 0
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670079600,
+    "teamA": "Netherlands",
+    "teamB": "United States",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 3,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670094000,
+    "teamA": "Argentina",
+    "teamB": "Australia",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 2,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670166000,
+    "teamA": "France",
+    "teamB": "Poland",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 3,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670180400,
+    "teamA": "England",
+    "teamB": "Senegal",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 3,
+    "teamBScore": 0
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670252400,
+    "teamA": "Japan",
+    "teamB": "Croatia",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 1,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670266800,
+    "teamA": "Brazil",
+    "teamB": "Korea Republic",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 4,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670338800,
+    "teamA": "Morocco",
+    "teamB": "Spain",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 0,
+    "teamBScore": 0
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670353200,
+    "teamA": "Portugal",
+    "teamB": "Switzerland",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": 6,
+    "teamBScore": 1
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670598000,
+    "teamA": "Croatia",
+    "teamB": "Brazil",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": null,
+    "teamBScore": null
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670612400,
+    "teamA": "Netherlands",
+    "teamB": "Argentina",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": null,
+    "teamBScore": null
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670684400,
+    "teamA": "Morocco",
+    "teamB": "Portugal",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": null,
+    "teamBScore": null
+  },
+  {
+    "code": "2022_WORLD_CUP",
+    "endsAt": 1670698800,
+    "teamA": "England",
+    "teamB": "France",
+    "pricePerTicket": 1000000000000000,
+    "commissionPerTicket": 10000000000000,
+    "teamAScore": null,
+    "teamBScore": null
+  }
+]
