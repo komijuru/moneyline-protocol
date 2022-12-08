@@ -1,7 +1,8 @@
 import {NonceManager} from '@ethersproject/experimental';
 
 import {MONEYLINE_BETS_CONTRACT, Result} from './index';
-import worldCup2022 from './worldCup2022_test.json';
+import worldCup2022 from './worldCup2022_prod.json';
+import {parseEther} from "ethers/lib/utils";
 
 async function main() {
     const {contract, owner} = await MONEYLINE_BETS_CONTRACT();
@@ -10,7 +11,6 @@ async function main() {
     const ahn = await owner.getAddress();
 
     const bets = worldCup2022
-        .slice(45)
         .filter(it => it.teamA && it.teamB)
         .map((it, idx) => ({...it, id: idx + 1}));
     const closedBets = bets
@@ -20,14 +20,13 @@ async function main() {
     const operatorRole = await contract.OPERATOR_ROLE();
     const injectorRole = await contract.INJECTOR_ROLE();
 
-    await contract.connect(executor).grantRole(operatorRole, lee);
     await contract.connect(executor).grantRole(operatorRole, ahn);
-    await contract.connect(executor).grantRole(operatorRole, kim);
-    await contract.connect(executor).grantRole(injectorRole, lee);
     await contract.connect(executor).grantRole(injectorRole, ahn);
-    await contract.connect(executor).grantRole(injectorRole, kim);
+    await contract.connect(executor).grantRole(operatorRole, lee);
+    await contract.connect(executor).grantRole(injectorRole, lee);
 
 
+    const now = Math.floor(new Date().getTime() / 1e3)
     const tx = await contract.connect(executor)
         .openBets(bets
             .map(it => (
@@ -35,10 +34,10 @@ async function main() {
                     code: it.code,
                     teamA: it.teamA!,
                     teamB: it.teamB!,
-                    startsAt: it.date - 604800, // 7 days before
-                    endsAt: it.date,
-                    pricePerTicket: it.pricePerTicket,
-                    commissionPerTicket: it.commissionPerTicket
+                    startsAt: it.endsAt < now ? it.endsAt - 86400 : now,
+                    endsAt: it.endsAt,
+                    pricePerTicket: parseEther(it.pricePerTicket),
+                    commissionPerTicket: parseEther(it.commissionPerTicket)
                 }
             )));
 

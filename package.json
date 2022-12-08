@@ -51,7 +51,7 @@
     "deploy:mainnet": "ETH_NETWORK=mainnet hardhat deploy --network mainnet --tags $tags --export ./deployments/mainnet.json",
     "verify:testnet": "hardhat --network goerli etherscan-verify",
     "verify:mainnet": "ETH_NETWORK=mainnet hardhat --network mainnet etherscan-verify",
-    "export:testnet": "hardhat --network goerli export --export ./deployment/abi/goerli.json",
-    "export:mainnet": "ETH_NETWORK=mainnet hardhat --network mainnet export --export ./deployment/abi/mainnet.json"
+    "export:testnet": "hardhat --network goerli export --export ./deployments/abi/goerli.json",
+    "export:mainnet": "ETH_NETWORK=mainnet hardhat --network mainnet export --export ./deployments/abi/mainnet.json"
   }
 }

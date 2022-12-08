@@ -28,12 +28,17 @@ const config: HardhatUserConfig = {
         ]
     },
     networks: {
+        mainnet: {
+            url: process.env.MAINNET_URL,
+            accounts: [process.env.PRODUCTION_ACCOUNT ?? '']
+        },
         goerli: {
             url: process.env.GOERLI_URL,
             accounts: [process.env.ALICE_ACCOUNT ?? '', process.env.BOB_ACCOUNT ?? '']
         }
     },
     namedAccounts: {
+        deployer: 0,
         alice: 0,
         bob: 1,
         carol: 2
@@ -42,6 +47,11 @@ const config: HardhatUserConfig = {
         etherscan: {
             apiKey: process.env.ETHERSCAN_API_KEY
         }
+    },
+    gasReporter: {
+        currency: 'CHF',
+        gasPriceApi: "https://api.etherscan.io/api?module=proxy&action=eth_gasPrice",
+        enabled: true
     }
 };
 

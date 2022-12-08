@@ -6,9 +6,9 @@ async function main() {
     const betId = await contract.latestBetId();
     const bet = await contract.viewBet(betId, await alice.getAddress());
     console.log("Making:", bet)
-    const tx1 = await contract.connect(alice).makeBet(betId, Result.WIN, 1, {value: parseEther("0.001")});
+    const tx1 = await contract.connect(alice).makeBet(betId, Result.WIN, 1, {value: parseEther("0.01")});
     console.log(tx1)
-    const tx2 = await contract.connect(bob).makeBet(betId, Result.LOSE, 2, {value: parseEther("0.002")});
+    const tx2 = await contract.connect(bob).makeBet(betId, Result.LOSE, 2, {value: parseEther("0.02")});
     console.log(tx2)
 }
 
